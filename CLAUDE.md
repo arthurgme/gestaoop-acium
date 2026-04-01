@@ -82,12 +82,41 @@ npm run build    # Build para produção
 npm run preview  # Preview do build
 ```
 
+## Deploy
+
+- **GitHub:** https://github.com/arthurgme/gestaoop-acium
+- **Vercel:** https://acium-voucher.vercel.app
+- Deploy automático a cada `git push origin main`
+- Variáveis de ambiente configuradas na Vercel: `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`
+
+Para novo deploy manual:
+```bash
+git add .
+git commit -m "..."
+git push
+```
+
+## Erros inline (padrão)
+
+Nenhum `alert()` no codebase. Todos os erros são exibidos como banners vermelhos inline, próximos ao elemento que gerou o erro:
+
+```jsx
+const [erro, setErro] = useState('')
+
+// No handler:
+if (error) setErro('Mensagem: ' + error.message)
+
+// No JSX:
+{erro && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erro}</p>}
+```
+
 ## Setup inicial
 
 1. Criar projeto no Supabase
-2. Criar `.env` com URL e anon key
+2. Criar `.env` com URL e anon key (ver `.env.example`)
 3. Executar `supabase/migration.sql` no SQL Editor do Supabase
-4. Criar primeiro usuário admin manualmente no Supabase Auth + inserir profile com role "admin"
+4. Executar migrações adicionais na ordem (002 a 005)
+5. Criar primeiro usuário admin manualmente no Supabase Auth + inserir profile com role "admin"
 
 ---
 
