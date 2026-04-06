@@ -324,14 +324,53 @@ function UnidadeCard({ unidade }) {
 
 export default function TabConfigGlobais() {
   const [unidades, setUnidades] = useState([])
+  const [permitirCadastro, setPermitirCadastro] = useState(false)
+  const [savingConfig, setSavingConfig] = useState(false)
 
   useEffect(() => {
     supabase.from('unidades').select('*').eq('ativa', true).order('nome')
       .then(({ data }) => setUnidades(data || []))
+    supabase.from('configuracoes').select('valor').eq('chave', 'permitir_cadastro_vendedora_lancamento').single()
+      .then(({ data }) => setPermitirCadastro(data?.valor ?? false))
   }, [])
+
+  async function handleToggleConfig() {
+    setSavingConfig(true)
+    const novoValor = !permitirCadastro
+    await supabase.from('configuracoes').update({ valor: novoValor }).eq('chave', 'permitir_cadastro_vendedora_lancamento')
+    setPermitirCadastro(novoValor)
+    setSavingConfig(false)
+  }
 
   return (
     <div className="space-y-6">
+      {/* Configurações Gerais */}
+      <div className="bg-white rounded-xl shadow">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h3 className="font-semibold text-gray-800">Configurações Gerais</h3>
+        </div>
+        <div className="px-6 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Permitir cadastro de nova vendedora no lançamento</p>
+            <p className="text-xs text-gray-400 mt-0.5">Permite que o PDV adicione uma vendedora parceira diretamente durante o registro do atendimento.</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleConfig}
+            disabled={savingConfig}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors cursor-pointer disabled:opacity-50 ${
+              permitirCadastro ? 'bg-amber-600' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                permitirCadastro ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
       {unidades.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-8">Nenhuma unidade ativa.</p>
       ) : (

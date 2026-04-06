@@ -45,7 +45,7 @@ src/
 │       ├── TabPingentesAdmin.jsx  # Saldos por unidade + ajuste manual
 │       ├── TabUnidades.jsx        # CRUD unidades + criar usuário PDV junto
 │       ├── TabEquipe.jsx          # CRUD usuários + reset senha
-│       └── TabConfigGlobais.jsx   # Visão consolidada lojas/vendedoras por unidade
+│       └── TabConfigGlobais.jsx   # Visão consolidada lojas/vendedoras por unidade + toggle de configurações globais
 supabase/
 └── migration.sql            # Schema completo, triggers, RLS, funções RPC
 ```
@@ -59,7 +59,17 @@ Vendedoras internas não têm login — se identificam por seleção na tela de 
 
 ## Schema do banco (Supabase)
 
-Tabelas: `unidades`, `profiles` (extensão auth.users), `vendedoras_internas`, `lojas_parceiras`, `vendedoras_parceiras`, `atendimentos`, `movimentacoes_pingentes`.
+Tabelas: `unidades`, `profiles` (extensão auth.users), `vendedoras_internas`, `lojas_parceiras`, `vendedoras_parceiras`, `atendimentos`, `movimentacoes_pingentes`, `configuracoes`.
+
+### Configurações globais
+
+Tabela `configuracoes` (chave text PK, valor boolean). Usada para feature flags controladas pelo admin.
+
+| Chave | Descrição |
+|---|---|
+| `permitir_cadastro_vendedora_lancamento` | Permite PDV cadastrar nova vendedora parceira diretamente no lançamento |
+
+Admin lê e atualiza via `TabConfigGlobais`. PDV lê no mount de `TabLancamento` para habilitar/desabilitar o campo inline de nova vendedora.
 
 ### Lógica de pingentes
 
@@ -71,6 +81,7 @@ Tabelas: `unidades`, `profiles` (extensão auth.users), `vendedoras_internas`, `
 
 - PDV: lê/insere apenas onde `unidade_id` = sua unidade
 - PDV: insere movimentações apenas tipo "entrada"
+- PDV: lê `configuracoes` (somente leitura)
 - Admin: acesso total em todas as tabelas
 - Helpers: `current_user_role()` e `current_user_unidade_id()`
 
@@ -115,7 +126,7 @@ if (error) setErro('Mensagem: ' + error.message)
 1. Criar projeto no Supabase
 2. Criar `.env` com URL e anon key (ver `.env.example`)
 3. Executar `supabase/migration.sql` no SQL Editor do Supabase
-4. Executar migrações adicionais na ordem (002 a 005)
+4. Executar migrações adicionais na ordem (002 a 006)
 5. Criar primeiro usuário admin manualmente no Supabase Auth + inserir profile com role "admin"
 
 ---
@@ -231,3 +242,4 @@ Arquivos em `supabase/`, numerados sequencialmente. Executar no SQL Editor do Su
 | `migration_003_username.sql` | Campo `username` em profiles |
 | `migration_004_lojas_parceiras.sql` | Seed lojas parceiras por unidade |
 | `migration_005_remove_vendedoras_grande_rio.sql` | Remove vendedoras internas Grande Rio |
+| `migration_006_configuracoes.sql` | Tabela `configuracoes` com chaves booleanas globais |

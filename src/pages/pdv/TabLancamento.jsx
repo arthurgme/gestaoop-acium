@@ -15,6 +15,11 @@ export default function TabLancamento() {
   const [vendedorasParceiras, setVendedorasParceiras] = useState([])
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
+  const [permitirCadastro, setPermitirCadastro] = useState(false)
+  const [showNovaVendedora, setShowNovaVendedora] = useState(false)
+  const [novaVendedoraNome, setNovaVendedoraNome] = useState('')
+  const [savingNovaVendedora, setSavingNovaVendedora] = useState(false)
+  const [erroNovaVendedora, setErroNovaVendedora] = useState('')
 
   // Form state
   const [nomeCliente, setNomeCliente] = useState('')
@@ -56,6 +61,8 @@ export default function TabLancamento() {
     if (unidadeId) {
       loadAtendimentos()
       loadSelects()
+      supabase.from('configuracoes').select('valor').eq('chave', 'permitir_cadastro_vendedora_lancamento').single()
+        .then(({ data }) => setPermitirCadastro(data?.valor ?? false))
     }
   }, [unidadeId, loadAtendimentos, loadSelects])
 
@@ -85,6 +92,30 @@ export default function TabLancamento() {
     setQtdProdutos('')
     setStep(1)
     setShowForm(false)
+    setShowNovaVendedora(false)
+    setNovaVendedoraNome('')
+    setErroNovaVendedora('')
+  }
+
+  async function handleAdicionarNovaVendedora(e) {
+    e.preventDefault()
+    if (!novaVendedoraNome.trim()) return
+    setSavingNovaVendedora(true)
+    const { data, error } = await supabase
+      .from('vendedoras_parceiras')
+      .insert({ nome: novaVendedoraNome.trim(), loja_parceira_id: lojaParceiraId })
+      .select()
+      .single()
+    if (error) {
+      setErroNovaVendedora('Erro ao cadastrar: ' + error.message)
+    } else {
+      setVendedorasParceiras((prev) => [...prev, data].sort((a, b) => a.nome.localeCompare(b.nome)))
+      setVendedoraParceiraId(data.id)
+      setNovaVendedoraNome('')
+      setShowNovaVendedora(false)
+      setErroNovaVendedora('')
+    }
+    setSavingNovaVendedora(false)
   }
 
   async function handleSubmit(e) {
@@ -209,6 +240,47 @@ export default function TabLancamento() {
                       <option key={v.id} value={v.id}>{v.nome}</option>
                     ))}
                   </select>
+                  {permitirCadastro && lojaParceiraId && (
+                    <div className="mt-1">
+                      {!showNovaVendedora ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowNovaVendedora(true)}
+                          className="text-xs text-amber-600 hover:text-amber-700 font-medium cursor-pointer"
+                        >
+                          + Incluir nova vendedora
+                        </button>
+                      ) : (
+                        <form onSubmit={handleAdicionarNovaVendedora} className="flex gap-2 mt-1">
+                          <input
+                            type="text"
+                            value={novaVendedoraNome}
+                            onChange={(e) => setNovaVendedoraNome(e.target.value)}
+                            placeholder="Nome da vendedora..."
+                            autoFocus
+                            className="flex-1 px-3 py-1.5 border border-amber-400 rounded-lg text-sm outline-none focus:ring-2 focus:ring-amber-500"
+                          />
+                          <button
+                            type="submit"
+                            disabled={savingNovaVendedora || !novaVendedoraNome.trim()}
+                            className="bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-amber-700 disabled:opacity-40 cursor-pointer transition-colors"
+                          >
+                            {savingNovaVendedora ? 'Salvando...' : 'Adicionar'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowNovaVendedora(false); setErroNovaVendedora('') }}
+                            className="text-xs text-gray-400 cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                        </form>
+                      )}
+                      {erroNovaVendedora && (
+                        <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg mt-1">{erroNovaVendedora}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
