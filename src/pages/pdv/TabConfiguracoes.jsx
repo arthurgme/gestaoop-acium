@@ -11,6 +11,7 @@ function VendedorasInternas({ unidadeId }) {
   const [editId, setEditId] = useState(null)
   const [editNome, setEditNome] = useState('')
   const [saving, setSaving] = useState(false)
+  const [verArquivadas, setVerArquivadas] = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -86,69 +87,89 @@ function VendedorasInternas({ unidadeId }) {
       {items.length === 0 ? (
         <p className="px-6 py-8 text-sm text-gray-400 text-center">Nenhuma vendedora cadastrada.</p>
       ) : (
-        <ul className="divide-y divide-gray-50">
-          {ativas.map((item) => (
-            <li key={item.id} className="px-6 py-3 flex items-center gap-3">
-              {editId === item.id ? (
-                <form onSubmit={(e) => handleEdit(e, item.id)} className="flex-1 flex gap-2">
-                  <input
-                    type="text"
-                    value={editNome}
-                    onChange={(e) => setEditNome(e.target.value)}
-                    autoFocus
-                    className="flex-1 px-3 py-1.5 border border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm"
-                  />
-                  <button type="submit" className="text-sm text-amber-600 font-medium cursor-pointer">Salvar</button>
-                  <button type="button" onClick={() => setEditId(null)} className="text-sm text-gray-400 cursor-pointer">Cancelar</button>
-                </form>
-              ) : (
-                <>
-                  <span className="flex-1 text-sm text-gray-800">{item.nome}</span>
-                  <button
-                    onClick={() => { setEditId(item.id); setEditNome(item.nome) }}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleToggle(item.id, false)}
-                    className="text-xs text-red-600 bg-red-50 hover:bg-red-100 font-medium px-3 py-1 rounded-full cursor-pointer"
-                  >
-                    Desativar
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-          {inativas.map((item) => (
-            <li key={item.id} className="px-6 py-3 flex items-center gap-3">
-              <span className="flex-1 text-sm text-gray-400 line-through">{item.nome}</span>
+        <>
+          <ul className="divide-y divide-gray-50">
+            {ativas.map((item) => (
+              <li key={item.id} className="px-6 py-3 flex items-center gap-3">
+                {editId === item.id ? (
+                  <form onSubmit={(e) => handleEdit(e, item.id)} className="flex-1 flex gap-2">
+                    <input
+                      type="text"
+                      value={editNome}
+                      onChange={(e) => setEditNome(e.target.value)}
+                      autoFocus
+                      className="flex-1 px-3 py-1.5 border border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm"
+                    />
+                    <button type="submit" className="text-sm text-amber-600 font-medium cursor-pointer">Salvar</button>
+                    <button type="button" onClick={() => setEditId(null)} className="text-sm text-gray-400 cursor-pointer">Cancelar</button>
+                  </form>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-gray-800">{item.nome}</span>
+                    <button
+                      onClick={() => { setEditId(item.id); setEditNome(item.nome) }}
+                      className="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleToggle(item.id, false)}
+                      className="text-xs text-red-600 bg-red-50 hover:bg-red-100 font-medium px-3 py-1 rounded-full cursor-pointer"
+                    >
+                      Arquivar
+                    </button>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {inativas.length > 0 && (
+            <div className="border-t border-gray-100">
               <button
-                onClick={() => handleToggle(item.id, true)}
-                className="text-xs text-green-600 bg-green-50 hover:bg-green-100 font-medium px-3 py-1 rounded-full cursor-pointer"
+                onClick={() => setVerArquivadas((v) => !v)}
+                className="w-full px-6 py-3 flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 cursor-pointer transition-colors"
               >
-                Ativar
+                <svg className={`w-4 h-4 transition-transform ${verArquivadas ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                {verArquivadas ? 'Ocultar arquivadas' : `Ver arquivadas (${inativas.length})`}
               </button>
-            </li>
-          ))}
-        </ul>
+              {verArquivadas && (
+                <ul className="divide-y divide-gray-50 border-t border-gray-50">
+                  {inativas.map((item) => (
+                    <li key={item.id} className="px-6 py-3 flex items-center gap-3">
+                      <span className="flex-1 text-sm text-gray-400 line-through">{item.nome}</span>
+                      <button
+                        onClick={() => handleToggle(item.id, true)}
+                        className="text-xs text-green-600 bg-green-50 hover:bg-green-100 font-medium px-3 py-1 rounded-full cursor-pointer"
+                      >
+                        Ativar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </>
       )}
       </>}
     </div>
   )
 }
 
-// ── Lojas + Vendedoras Parceiras (acordeão) ─────────────────────────────────
+// ── Modal de Vendedoras da Loja ─────────────────────────────────────────────
 
-function LojaRow({ loja, onToggleLoja }) {
-  const [open, setOpen] = useState(false)
+function LojaModal({ loja, onClose, onVendadorasChange }) {
   const [vendedoras, setVendedoras] = useState([])
   const [novoNome, setNovoNome] = useState('')
   const [editId, setEditId] = useState(null)
   const [editNome, setEditNome] = useState('')
   const [saving, setSaving] = useState(false)
+  const [verArquivadas, setVerArquivadas] = useState(false)
 
-  const loadVendedoras = useCallback(async () => {
+  const load = useCallback(async () => {
     const { data } = await supabase
       .from('vendedoras_parceiras')
       .select('*')
@@ -157,110 +178,105 @@ function LojaRow({ loja, onToggleLoja }) {
     setVendedoras(data || [])
   }, [loja.id])
 
-  useEffect(() => {
-    if (open) loadVendedoras()
-  }, [open, loadVendedoras])
+  useEffect(() => { load() }, [load])
 
-  async function handleAddVendedora(e) {
+  async function handleAdd(e) {
     e.preventDefault()
     if (!novoNome.trim()) return
     setSaving(true)
     await supabase.from('vendedoras_parceiras').insert({ nome: novoNome.trim(), loja_parceira_id: loja.id })
     setNovoNome('')
-    await loadVendedoras()
+    await load()
+    onVendadorasChange(loja.id)
     setSaving(false)
   }
 
-  async function handleEditVendedora(e, id) {
+  async function handleEdit(e, id) {
     e.preventDefault()
     if (!editNome.trim()) return
     await supabase.from('vendedoras_parceiras').update({ nome: editNome.trim() }).eq('id', id)
     setEditId(null)
-    loadVendedoras()
+    load()
   }
 
-  async function handleToggleVendedora(id, ativa) {
+  async function handleToggle(id, ativa) {
     await supabase.from('vendedoras_parceiras').update({ ativa }).eq('id', id)
-    loadVendedoras()
+    await load()
+    onVendadorasChange(loja.id)
   }
 
   const ativas = vendedoras.filter((v) => v.ativa)
   const inativas = vendedoras.filter((v) => !v.ativa)
 
   return (
-    <li className={`border-b border-gray-50 last:border-0 ${!loja.ativa ? 'opacity-60' : ''}`}>
-      {/* Cabeçalho da loja */}
-      <div className="px-6 py-3 flex items-center gap-3">
-        <button
-          onClick={() => { if (loja.ativa) setOpen((o) => !o) }}
-          className={`flex items-center gap-2 flex-1 text-left ${loja.ativa ? 'cursor-pointer' : 'cursor-default'}`}
-        >
-          {loja.ativa && (
-            <svg className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    <div
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col"
+        style={{ maxHeight: '80vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h3 className="font-semibold text-gray-800">{loja.nome}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{ativas.length} vendedora{ativas.length !== 1 ? 's' : ''} ativa{ativas.length !== 1 ? 's' : ''}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 cursor-pointer transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          )}
-          <span className={`text-sm font-medium ${loja.ativa ? 'text-gray-800' : 'text-gray-400 line-through'}`}>
-            {loja.nome}
-          </span>
-          {loja.ativa && open && (
-            <span className="text-xs text-gray-400 font-normal">{ativas.length} vendedora{ativas.length !== 1 ? 's' : ''}</span>
-          )}
-        </button>
-        <button
-          onClick={() => onToggleLoja(loja.id, !loja.ativa)}
-          className={`text-xs font-medium px-3 py-1 rounded-full cursor-pointer ${
-            loja.ativa
-              ? 'text-red-600 bg-red-50 hover:bg-red-100'
-              : 'text-green-600 bg-green-50 hover:bg-green-100'
-          }`}
-        >
-          {loja.ativa ? 'Desativar' : 'Ativar'}
-        </button>
-      </div>
+          </button>
+        </div>
 
-      {/* Vendedoras expandidas */}
-      {open && loja.ativa && (
-        <div className="bg-gray-50 border-t border-gray-100">
-          {/* Formulário de adição */}
-          <form onSubmit={handleAddVendedora} className="px-8 py-2 flex gap-2 border-b border-gray-100">
-            <input
-              type="text"
-              value={novoNome}
-              onChange={(e) => setNovoNome(e.target.value)}
-              placeholder="Nova vendedora..."
-              className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm bg-white"
-            />
-            <button
-              type="submit"
-              disabled={saving || !novoNome.trim()}
-              className="bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-amber-700 disabled:opacity-40 cursor-pointer transition-colors"
-            >
-              Adicionar
-            </button>
-          </form>
+        {/* Formulário de adição */}
+        <form onSubmit={handleAdd} className="px-6 py-3 border-b border-gray-100 flex gap-2 flex-shrink-0">
+          <input
+            type="text"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            placeholder="Nova vendedora..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+          />
+          <button
+            type="submit"
+            disabled={saving || !novoNome.trim()}
+            className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-40 cursor-pointer transition-colors"
+          >
+            Adicionar
+          </button>
+        </form>
 
+        {/* Lista de vendedoras ativas */}
+        <div className="overflow-y-auto flex-1">
           {vendedoras.length === 0 ? (
-            <p className="px-8 py-4 text-xs text-gray-400">Nenhuma vendedora cadastrada.</p>
+            <p className="px-6 py-8 text-sm text-gray-400 text-center">Nenhuma vendedora cadastrada.</p>
+          ) : ativas.length === 0 ? (
+            <p className="px-6 py-6 text-sm text-gray-400 text-center">Nenhuma vendedora ativa.</p>
           ) : (
-            <ul>
+            <ul className="divide-y divide-gray-50">
               {ativas.map((v) => (
-                <li key={v.id} className="px-8 py-2 flex items-center gap-3">
+                <li key={v.id} className="px-6 py-3 flex items-center gap-3">
                   {editId === v.id ? (
-                    <form onSubmit={(e) => handleEditVendedora(e, v.id)} className="flex-1 flex gap-2">
+                    <form onSubmit={(e) => handleEdit(e, v.id)} className="flex-1 flex gap-2">
                       <input
                         type="text"
                         value={editNome}
                         onChange={(e) => setEditNome(e.target.value)}
                         autoFocus
-                        className="flex-1 px-3 py-1 border border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm bg-white"
+                        className="flex-1 px-3 py-1.5 border border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none text-sm"
                       />
-                      <button type="submit" className="text-xs text-amber-600 font-medium cursor-pointer">Salvar</button>
-                      <button type="button" onClick={() => setEditId(null)} className="text-xs text-gray-400 cursor-pointer">Cancelar</button>
+                      <button type="submit" className="text-sm text-amber-600 font-medium cursor-pointer">Salvar</button>
+                      <button type="button" onClick={() => setEditId(null)} className="text-sm text-gray-400 cursor-pointer">Cancelar</button>
                     </form>
                   ) : (
                     <>
-                      <span className="flex-1 text-sm text-gray-700">{v.nome}</span>
+                      <span className="flex-1 text-sm text-gray-800">{v.nome}</span>
                       <button
                         onClick={() => { setEditId(v.id); setEditNome(v.nome) }}
                         className="text-xs text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
@@ -268,39 +284,63 @@ function LojaRow({ loja, onToggleLoja }) {
                         Editar
                       </button>
                       <button
-                        onClick={() => handleToggleVendedora(v.id, false)}
-                        className="text-xs text-red-600 bg-red-50 hover:bg-red-100 font-medium px-2 py-0.5 rounded-full cursor-pointer"
+                        onClick={() => handleToggle(v.id, false)}
+                        className="text-xs text-red-600 bg-red-50 hover:bg-red-100 font-medium px-3 py-1 rounded-full cursor-pointer"
                       >
-                        Desativar
+                        Arquivar
                       </button>
                     </>
                   )}
                 </li>
               ))}
-              {inativas.map((v) => (
-                <li key={v.id} className="px-8 py-2 flex items-center gap-3">
-                  <span className="flex-1 text-sm text-gray-400 line-through">{v.nome}</span>
-                  <button
-                    onClick={() => handleToggleVendedora(v.id, true)}
-                    className="text-xs text-green-600 bg-green-50 hover:bg-green-100 font-medium px-2 py-0.5 rounded-full cursor-pointer"
-                  >
-                    Ativar
-                  </button>
-                </li>
-              ))}
             </ul>
           )}
+
+          {/* Seção de arquivadas */}
+          {inativas.length > 0 && (
+            <div className="border-t border-gray-100">
+              <button
+                onClick={() => setVerArquivadas((v) => !v)}
+                className="w-full px-6 py-3 flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 cursor-pointer transition-colors"
+              >
+                <svg className={`w-4 h-4 transition-transform ${verArquivadas ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                {verArquivadas ? 'Ocultar arquivadas' : `Ver arquivadas (${inativas.length})`}
+              </button>
+              {verArquivadas && (
+                <ul className="divide-y divide-gray-50 border-t border-gray-50">
+                  {inativas.map((v) => (
+                    <li key={v.id} className="px-6 py-3 flex items-center gap-3">
+                      <span className="flex-1 text-sm text-gray-400 line-through">{v.nome}</span>
+                      <button
+                        onClick={() => handleToggle(v.id, true)}
+                        className="text-xs text-green-600 bg-green-50 hover:bg-green-100 font-medium px-3 py-1 rounded-full cursor-pointer"
+                      >
+                        Ativar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </li>
+      </div>
+    </div>
   )
 }
+
+// ── Lojas Parceiras ─────────────────────────────────────────────────────────
 
 function LojasParceiras({ unidadeId }) {
   const [lojas, setLojas] = useState([])
   const [open, setOpen] = useState(true)
   const [novoNome, setNovoNome] = useState('')
   const [saving, setSaving] = useState(false)
+  const [lojaAberta, setLojaAberta] = useState(null)
+  const [contagemVendedoras, setContagemVendedoras] = useState({})
+  const [verArquivadas, setVerArquivadas] = useState(false)
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -311,7 +351,24 @@ function LojasParceiras({ unidadeId }) {
     setLojas(data || [])
   }, [unidadeId])
 
-  useEffect(() => { load() }, [load])
+  const loadContagens = useCallback(async () => {
+    const { data } = await supabase
+      .from('vendedoras_parceiras')
+      .select('loja_parceira_id')
+      .eq('ativa', true)
+    if (data) {
+      const mapa = {}
+      data.forEach(({ loja_parceira_id }) => {
+        mapa[loja_parceira_id] = (mapa[loja_parceira_id] || 0) + 1
+      })
+      setContagemVendedoras(mapa)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+    loadContagens()
+  }, [load, loadContagens])
 
   async function handleAdd(e) {
     e.preventDefault()
@@ -323,62 +380,126 @@ function LojasParceiras({ unidadeId }) {
     setSaving(false)
   }
 
-  async function handleToggle(id, ativa) {
+  async function handleToggleLoja(id, ativa) {
     await supabase.from('lojas_parceiras').update({ ativa }).eq('id', id)
     load()
   }
 
+  function handleVendadorasChange(lojaId) {
+    loadContagens()
+  }
+
   const ativas = lojas.filter((l) => l.ativa)
+  const inativas = lojas.filter((l) => !l.ativa)
 
   return (
-    <div className="bg-white rounded-xl shadow">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full px-6 py-4 border-b border-gray-100 flex items-center justify-between cursor-pointer text-left"
-      >
-        <div>
-          <h3 className="font-semibold text-gray-800">Lojas Parceiras</h3>
-          <p className="text-xs text-gray-400 mt-0.5">{ativas.length} ativa{ativas.length !== 1 ? 's' : ''} — clique na loja para ver as vendedoras</p>
-        </div>
-        <svg className={`w-5 h-5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && <>
-      {/* Formulário de adição */}
-      <form onSubmit={handleAdd} className="px-6 py-3 border-b border-gray-100 flex gap-2">
-        <input
-          type="text"
-          value={novoNome}
-          onChange={(e) => setNovoNome(e.target.value)}
-          placeholder="Nome da loja parceira..."
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
-        />
+    <>
+      <div className="bg-white rounded-xl shadow">
         <button
-          type="submit"
-          disabled={saving || !novoNome.trim()}
-          className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-40 cursor-pointer transition-colors"
+          onClick={() => setOpen((o) => !o)}
+          className="w-full px-6 py-4 border-b border-gray-100 flex items-center justify-between cursor-pointer text-left"
         >
-          Adicionar
+          <div>
+            <h3 className="font-semibold text-gray-800">Lojas Parceiras</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{ativas.length} ativa{ativas.length !== 1 ? 's' : ''} — clique na loja para gerenciar vendedoras</p>
+          </div>
+          <svg className={`w-5 h-5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </button>
-      </form>
 
-      {lojas.length === 0 ? (
-        <p className="px-6 py-8 text-sm text-gray-400 text-center">Nenhuma loja cadastrada.</p>
-      ) : (
-        <ul>
-          {lojas.map((loja) => (
-            <LojaRow
-              key={loja.id}
-              loja={loja}
-              onToggleLoja={handleToggle}
-            />
-          ))}
-        </ul>
+        {open && <>
+        {/* Formulário de adição */}
+        <form onSubmit={handleAdd} className="px-6 py-3 border-b border-gray-100 flex gap-2">
+          <input
+            type="text"
+            value={novoNome}
+            onChange={(e) => setNovoNome(e.target.value)}
+            placeholder="Nome da loja parceira..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-sm"
+          />
+          <button
+            type="submit"
+            disabled={saving || !novoNome.trim()}
+            className="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-40 cursor-pointer transition-colors"
+          >
+            Adicionar
+          </button>
+        </form>
+
+        {lojas.length === 0 ? (
+          <p className="px-6 py-8 text-sm text-gray-400 text-center">Nenhuma loja cadastrada.</p>
+        ) : (
+          <>
+            <ul className="divide-y divide-gray-50">
+              {ativas.map((loja) => {
+                const qtd = contagemVendedoras[loja.id] || 0
+                return (
+                  <li key={loja.id} className="px-6 py-3 flex items-center gap-3">
+                    <button
+                      onClick={() => setLojaAberta(loja)}
+                      className="flex-1 flex items-center gap-2 text-left cursor-pointer group"
+                    >
+                      <span className="text-sm font-medium text-gray-800 group-hover:text-amber-700 transition-colors">{loja.nome}</span>
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {qtd} vendedora{qtd !== 1 ? 's' : ''}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-300 group-hover:text-amber-500 transition-colors ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleToggleLoja(loja.id, false)}
+                      className="text-xs text-red-600 bg-red-50 hover:bg-red-100 font-medium px-3 py-1 rounded-full cursor-pointer"
+                    >
+                      Desativar
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {inativas.length > 0 && (
+              <div className="border-t border-gray-100">
+                <button
+                  onClick={() => setVerArquivadas((v) => !v)}
+                  className="w-full px-6 py-3 flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 cursor-pointer transition-colors"
+                >
+                  <svg className={`w-4 h-4 transition-transform ${verArquivadas ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  {verArquivadas ? 'Ocultar arquivadas' : `Ver arquivadas (${inativas.length})`}
+                </button>
+                {verArquivadas && (
+                  <ul className="divide-y divide-gray-50 border-t border-gray-50">
+                    {inativas.map((loja) => (
+                      <li key={loja.id} className="px-6 py-3 flex items-center gap-3">
+                        <span className="flex-1 text-sm text-gray-400 line-through">{loja.nome}</span>
+                        <button
+                          onClick={() => handleToggleLoja(loja.id, true)}
+                          className="text-xs text-green-600 bg-green-50 hover:bg-green-100 font-medium px-3 py-1 rounded-full cursor-pointer"
+                        >
+                          Ativar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </>
+        )}
+        </>}
+      </div>
+
+      {lojaAberta && (
+        <LojaModal
+          loja={lojaAberta}
+          onClose={() => setLojaAberta(null)}
+          onVendadorasChange={handleVendadorasChange}
+        />
       )}
-      </>}
-    </div>
+    </>
   )
 }
 
