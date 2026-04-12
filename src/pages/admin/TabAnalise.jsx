@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { formatCurrency, formatDateTime } from '../../lib/format'
+import { formatCurrency } from '../../lib/format'
 
 export default function TabAnalise() {
   const [unidades, setUnidades] = useState([])
@@ -46,25 +46,26 @@ export default function TabAnalise() {
       .limit(200)
 
     if (filtroUnidade) query = query.eq('unidade_id', filtroUnidade)
-    if (filtroDe) query = query.gte('criado_em', new Date(filtroDe).toISOString())
-    if (filtroAte) {
-      const end = new Date(filtroAte)
-      end.setHours(23, 59, 59, 999)
-      query = query.lte('criado_em', end.toISOString())
+    if (filtroDe) query = query.gte('criado_em', new Date(`${filtroDe}T00:00:00`).toISOString())
+    if (filtroAte) query = query.lte('criado_em', new Date(`${filtroAte}T23:59:59.999`).toISOString())
+    if (filtroLoja) {
+      const vpIds = vendedorasParceiras.filter((v) => v.loja_parceira_id === filtroLoja).map((v) => v.id)
+      if (vpIds.length > 0) {
+        query = query.in('vendedora_parceira_id', vpIds)
+      } else {
+        setAtendimentos([])
+        setLoading(false)
+        return
+      }
     }
     if (filtroVendedoraParceira) query = query.eq('vendedora_parceira_id', filtroVendedoraParceira)
     if (filtroVendedoraInterna) query = query.eq('vendedora_interna_id', filtroVendedoraInterna)
 
     query.then(({ data }) => {
-      let items = data || []
-      // Client-side filter for loja parceira (via vendedora_parceira)
-      if (filtroLoja) {
-        items = items.filter((a) => a.vendedora_parceira?.loja?.nome === lojasParceiras.find((l) => l.id === filtroLoja)?.nome)
-      }
-      setAtendimentos(items)
+      setAtendimentos(data || [])
       setLoading(false)
     })
-  }, [filtroUnidade, filtroDe, filtroAte, filtroLoja, filtroVendedoraParceira, filtroVendedoraInterna, lojasParceiras])
+  }, [filtroUnidade, filtroDe, filtroAte, filtroLoja, filtroVendedoraParceira, filtroVendedoraInterna, vendedorasParceiras])
 
   // Metrics
   const totalAtendimentos = atendimentos.length
@@ -206,58 +207,6 @@ export default function TabAnalise() {
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800">Atendimentos</h3>
-        </div>
-        {loading ? (
-          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" /></div>
-        ) : atendimentos.length === 0 ? (
-          <p className="px-6 py-8 text-sm text-gray-400 text-center">Nenhum atendimento encontrado.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="px-4 py-3 font-medium">Data</th>
-                  <th className="px-4 py-3 font-medium">Unidade</th>
-                  <th className="px-4 py-3 font-medium">Cliente</th>
-                  <th className="px-4 py-3 font-medium">V. Interna</th>
-                  <th className="px-4 py-3 font-medium">Loja</th>
-                  <th className="px-4 py-3 font-medium">V. Parceira</th>
-                  <th className="px-4 py-3 font-medium">Venda</th>
-                  <th className="px-4 py-3 font-medium">Valor</th>
-                  <th className="px-4 py-3 font-medium">Boleta</th>
-                  <th className="px-4 py-3 font-medium">Prod.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {atendimentos.map((a) => (
-                  <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatDateTime(a.criado_em)}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.unidade?.nome}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{a.nome_cliente}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.vendedora_interna?.nome}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.vendedora_parceira?.loja?.nome}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.vendedora_parceira?.nome}</td>
-                    <td className="px-4 py-3">
-                      {a.houve_venda ? (
-                        <span className="text-green-700 bg-green-100 px-2 py-0.5 rounded-full text-xs font-medium">Sim</span>
-                      ) : (
-                        <span className="text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full text-xs font-medium">Não</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">{a.houve_venda ? formatCurrency(a.valor_venda) : '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.numero_boleta || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{a.qtd_produtos || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
       {/* Tabela: Por Vendedora Interna */}
       <div className="bg-white rounded-xl shadow">
         <div className="px-6 py-4 border-b border-gray-100">
