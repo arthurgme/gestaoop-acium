@@ -42,6 +42,7 @@ export default function TabLancamento() {
         vendedora_parceira:vendedoras_parceiras(nome, loja:lojas_parceiras(nome))
       `)
       .eq('unidade_id', unidadeId)
+      .eq('arquivado', false)
       .gte('criado_em', start)
       .lte('criado_em', end)
       .order('criado_em', { ascending: false })

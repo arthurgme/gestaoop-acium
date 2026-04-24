@@ -16,6 +16,7 @@ export default function TabResultados() {
       .from('atendimentos')
       .select('*')
       .eq('unidade_id', unidadeId)
+      .eq('arquivado', false)
       .gte('criado_em', start)
       .lte('criado_em', end)
       .then(({ data }) => {

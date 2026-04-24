@@ -54,7 +54,8 @@ create table public.atendimentos (
   houve_venda boolean not null default false,
   valor_venda numeric,
   numero_boleta text,
-  qtd_produtos int
+  qtd_produtos int,
+  arquivado boolean not null default false
 );
 
 -- 7. Tabela: movimentacoes_pingentes
@@ -262,6 +263,11 @@ create policy "pdv read own unidade atendimentos"
 
 create policy "pdv insert own unidade atendimentos"
   on public.atendimentos for insert
+  with check (unidade_id = public.current_user_unidade_id());
+
+create policy "pdv update arquivado own unidade"
+  on public.atendimentos for update
+  using (unidade_id = public.current_user_unidade_id())
   with check (unidade_id = public.current_user_unidade_id());
 
 -- ============================================================
