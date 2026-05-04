@@ -40,7 +40,7 @@ export default function TabAnalise() {
         *,
         unidade:unidades(nome),
         vendedora_interna:vendedoras_internas(nome),
-        vendedora_parceira:vendedoras_parceiras(nome, loja:lojas_parceiras(nome))
+        vendedora_parceira:vendedoras_parceiras(nome, loja:lojas_parceiras(id, nome))
       `)
       .order('criado_em', { ascending: false })
       .limit(200)
@@ -134,7 +134,7 @@ export default function TabAnalise() {
 
   const porLojaParceira = groupBy(
     atendimentos,
-    (a) => a.vendedora_parceira?.loja?.nome || null,
+    (a) => a.vendedora_parceira?.loja?.id || null,
     (a) => a.vendedora_parceira?.loja?.nome || '—',
   )
 
@@ -154,7 +154,7 @@ export default function TabAnalise() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Unidade</label>
-            <select value={filtroUnidade} onChange={(e) => setFiltroUnidade(e.target.value)}
+            <select value={filtroUnidade} onChange={(e) => { setFiltroUnidade(e.target.value); setFiltroLoja(''); setFiltroVendedoraParceira('') }}
               className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none">
               <option value="">Todas</option>
               {unidades.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
@@ -172,7 +172,7 @@ export default function TabAnalise() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Loja Parceira</label>
-            <select value={filtroLoja} onChange={(e) => setFiltroLoja(e.target.value)}
+            <select value={filtroLoja} onChange={(e) => { setFiltroLoja(e.target.value); setFiltroVendedoraParceira('') }}
               className="w-full px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 outline-none">
               <option value="">Todas</option>
               {filteredLojas.map((l) => <option key={l.id} value={l.id}>{l.nome}</option>)}
