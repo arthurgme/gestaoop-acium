@@ -43,7 +43,6 @@ export default function TabAnalise() {
         vendedora_parceira:vendedoras_parceiras(nome, loja:lojas_parceiras(id, nome))
       `)
       .order('criado_em', { ascending: false })
-      .limit(200)
 
     if (filtroUnidade) query = query.eq('unidade_id', filtroUnidade)
     if (filtroDe) query = query.gte('criado_em', new Date(`${filtroDe}T00:00:00`).toISOString())
