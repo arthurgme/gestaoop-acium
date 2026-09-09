@@ -4,7 +4,7 @@ import TabAtendimentos from '../pages/pdv/TabAtendimentos'
 import { mockQueryChain, setupFromMock } from './mocks/supabase'
 
 vi.mock('../lib/supabase', () => ({
-  supabase: { from: vi.fn() },
+  supabase: { from: vi.fn(), rpc: vi.fn() },
 }))
 
 import { supabase } from '../lib/supabase'
@@ -86,8 +86,8 @@ describe('TabAtendimentos (PDV)', () => {
     const input = screen.getByPlaceholderText(/pesquisar/i)
     fireEvent.change(input, { target: { value: 'João' } })
 
+    await waitFor(() => expect(screen.queryByText('Carlos Lima')).not.toBeInTheDocument())
     expect(screen.getByText('João Silva')).toBeInTheDocument()
-    expect(screen.queryByText('Carlos Lima')).not.toBeInTheDocument()
   })
 
   it('busca filtra por número de boleta', async () => {
@@ -101,8 +101,8 @@ describe('TabAtendimentos (PDV)', () => {
     const input = screen.getByPlaceholderText(/pesquisar/i)
     fireEvent.change(input, { target: { value: 'BOL-001' } })
 
+    await waitFor(() => expect(screen.queryByText('Carlos')).not.toBeInTheDocument())
     expect(screen.getByText('João Silva')).toBeInTheDocument()
-    expect(screen.queryByText('Carlos')).not.toBeInTheDocument()
   })
 
   it('botão Arquivar chama update com { arquivado: true }', async () => {

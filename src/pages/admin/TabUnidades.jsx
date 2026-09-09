@@ -9,10 +9,6 @@ export default function TabUnidades() {
 
   // Create form
   const [nome, setNome] = useState('')
-  const [criarPdv, setCriarPdv] = useState(false)
-  const [pdvNome, setPdvNome] = useState('')
-  const [pdvUsername, setPdvUsername] = useState('')
-  const [pdvSenha, setPdvSenha] = useState('')
   const [loading, setLoading] = useState(false)
   const [erroForm, setErroForm] = useState('')
   const [erroDelete, setErroDelete] = useState('')
@@ -39,7 +35,7 @@ export default function TabUnidades() {
     e.preventDefault()
     setLoading(true)
 
-    const { data: unidade, error } = await supabase
+    const { error } = await supabase
       .from('unidades')
       .insert({ nome })
       .select()
@@ -51,29 +47,8 @@ export default function TabUnidades() {
       return
     }
 
-    if (criarPdv && pdvUsername && pdvSenha) {
-      const email = `${pdvUsername.trim().toLowerCase()}@acium.local`
-      const { error: authErr } = await supabase.auth.signUp({
-        email,
-        password: pdvSenha,
-        options: {
-          data: {
-            nome: pdvNome || pdvUsername,
-            role: 'pdv',
-            unidade_id: unidade.id,
-            username: pdvUsername.trim().toLowerCase(),
-          },
-        },
-      })
-      if (authErr) { setErroForm('Unidade criada, mas erro ao criar usuário PDV: ' + authErr.message) }
-    }
-
     setErroForm('')
     setNome('')
-    setCriarPdv(false)
-    setPdvNome('')
-    setPdvUsername('')
-    setPdvSenha('')
     setShowCreate(false)
     loadUnidades()
     setLoading(false)
@@ -123,42 +98,7 @@ export default function TabUnidades() {
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">Criar usuário PDV?</label>
-            <button
-              type="button"
-              onClick={() => setCriarPdv(!criarPdv)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                criarPdv ? 'bg-amber-600' : 'bg-gray-300'
-              }`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                criarPdv ? 'translate-x-6' : 'translate-x-1'
-              }`} />
-            </button>
-          </div>
-
-          {criarPdv && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                <input type="text" value={pdvNome} onChange={(e) => setPdvNome(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Usuário (login)</label>
-                <input type="text" value={pdvUsername} onChange={(e) => setPdvUsername(e.target.value)} required
-                  pattern="[a-zA-Z0-9._-]+"
-                  placeholder="ex: pdv.shopping"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-                <input type="password" value={pdvSenha} onChange={(e) => setPdvSenha(e.target.value)} required minLength={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" />
-              </div>
-            </div>
-          )}
+          <p className="text-xs text-gray-500">Depois de criar a unidade, abra a aba <strong>Acessos</strong> para configurar o login e a senha.</p>
 
           {erroForm && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erroForm}</p>}
           <button type="submit" disabled={loading}

@@ -7,15 +7,17 @@ import TabPingentesAdmin from './TabPingentesAdmin'
 import TabUnidades from './TabUnidades'
 import TabEquipe from './TabEquipe'
 import TabConfigGlobais from './TabConfigGlobais'
+import TabAuditoria from './TabAuditoria'
 
 const TABS = [
-  { key: 'analise', label: 'Análise' },
+  { key: 'analise', label: 'Dashboard' },
   { key: 'atendimentos', label: 'Atendimentos' },
   { key: 'parceiros', label: 'Parceiros' },
-  { key: 'pingentes', label: 'Pingentes' },
   { key: 'unidades', label: 'Unidades' },
-  { key: 'equipe', label: 'Equipe' },
-  { key: 'config', label: 'Config. Globais' },
+  { key: 'equipe', label: 'Acessos' },
+  { key: 'pingentes', label: 'Estoque' },
+  { key: 'config', label: 'Configurações' },
+  { key: 'auditoria', label: 'Auditoria' },
 ]
 
 export default function AdminDashboard() {
@@ -30,6 +32,7 @@ export default function AdminDashboard() {
       {activeTab === 'unidades' && <TabUnidades />}
       {activeTab === 'equipe' && <TabEquipe />}
       {activeTab === 'config' && <TabConfigGlobais />}
+      {activeTab === 'auditoria' && <TabAuditoria />}
     </Layout>
   )
 }

@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+:root {
+  color: #292524;
+  background: #f7f3eb;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+body { margin: 0; min-width: 320px; background: #f7f3eb; }
+button, input, select { font: inherit; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(180, 133, 33, .22); outline-offset: 2px; }
+
+.app-shell { min-height: 100vh; background: #f7f3eb; }
+.surface { border: 1px solid #e7e0d3; border-radius: 14px; background: #fffdfa; box-shadow: 0 1px 2px rgba(41, 37, 36, .04); }
+.eyebrow { color: #9a6e18 !important; font-size: .7rem !important; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+.page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; }
+.page-intro h2 { margin-top: .15rem; color: #292524; font-size: clamp(1.45rem, 3vw, 2rem); font-weight: 750; letter-spacing: -.035em; }
+.page-intro p { margin-top: .25rem; color: #78716c; font-size: .875rem; }
+.journey-line { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; color: #78716c; font-size: .72rem; white-space: nowrap; }
+.journey-line span, .journey-line strong { padding: .34rem .55rem; border-radius: 999px; background: #eee8dd; font-weight: 650; }
+.journey-line strong { color: #684b12; background: #f3dfad; }
+.journey-line i { color: #b9ad9a; font-style: normal; }
+
+.filter-label, .field-label { display: block; color: #57534e; font-size: .75rem; font-weight: 700; }
+.field-control { width: 100%; min-height: 2.5rem; padding: .55rem .7rem; border: 1px solid #d6cfc2; border-radius: 9px; color: #292524; background: #fff; font-size: .875rem; }
+.field-control:disabled { color: #a8a29e; background: #f5f5f4; cursor: not-allowed; }
+.period-pills { display: flex; gap: .45rem; margin-top: .5rem; overflow-x: auto; padding-bottom: .2rem; }
+.period-pill { flex: 0 0 auto; min-height: 2.25rem; padding: .45rem .75rem; border: 1px solid #ddd5c8; border-radius: 999px; color: #57534e; background: #fff; font-size: .78rem; font-weight: 650; cursor: pointer; }
+.period-pill:hover { border-color: #c39a46; color: #765718; }
+.period-pill-active { border-color: #ad7b1c; color: #fff; background: #ad7b1c; }
+
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.metric-card { min-height: 7rem; padding: 1rem; border: 1px solid #e7e0d3; border-radius: 13px; background: #fffdfa; }
+.metric-card p { color: #78716c; font-size: .75rem; font-weight: 650; }
+.metric-card strong { display: block; margin-top: .65rem; color: #292524; font-size: clamp(1.35rem, 3vw, 1.9rem); font-weight: 760; letter-spacing: -.035em; }
+.metric-card-featured { border-color: #d6b66f; background: #fbf3df; }
+.metric-card-featured strong { color: #765718; }
+
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.15rem; border-bottom: 1px solid #eee8df; }
+.section-heading h3 { color: #292524; font-size: .95rem; font-weight: 750; }
+.section-heading p { margin-top: .15rem; color: #8a8279; font-size: .75rem; }
+.count-badge { min-width: 1.7rem; padding: .2rem .45rem; border-radius: 999px; color: #765718; background: #f4e7c7; font-size: .7rem; font-weight: 750; text-align: center; }
+.data-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: .8rem; }
+.data-table th { padding: .7rem 1rem; color: #78716c; background: #faf8f4; font-size: .7rem; font-weight: 700; text-align: left; text-transform: uppercase; letter-spacing: .035em; }
+.data-table td { padding: .8rem 1rem; border-top: 1px solid #f0ece5; color: #57534e; }
+.data-table tbody tr:hover { background: #fcfaf5; }
+.empty-state { padding: 2.5rem 1rem; color: #a8a29e; font-size: .85rem; text-align: center; }
+.alert-error { padding: .8rem 1rem; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; background: #fef2f2; font-size: .84rem; }
+.alert-success { padding: .8rem 1rem; border: 1px solid #bbd8c2; border-radius: 10px; color: #285b36; background: #f0f8f1; font-size: .84rem; }
+
+@media (min-width: 640px) { .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .metric-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 800px) {
+  .page-intro { align-items: flex-start; flex-direction: column; }
+  .journey-line { justify-content: flex-start; white-space: normal; }
+}

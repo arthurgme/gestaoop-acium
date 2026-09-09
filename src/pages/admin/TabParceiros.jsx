@@ -15,124 +15,52 @@ function StatusBadge({ status }) {
 }
 
 export default function TabParceiros() {
-  // Referência — carregados uma vez no mount
   const [unidades, setUnidades] = useState([])
-  const [lojasParceiras, setLojasParceiras] = useState([])
-  const [vendedorasParceiras, setVendedorasParceiras] = useState([])
-
-  // Dados — recarregam ao mudar filtros
-  const [atendimentosPeriodo, setAtendimentosPeriodo] = useState([])
-  const [ultimosAtendimentos, setUltimosAtendimentos] = useState([])
-
-  // Filtros
+  const [parceirosMetricas, setParceirosMetricas] = useState([])
   const [filtroUnidade, setFiltroUnidade] = useState('')
   const [periodo, setPeriodo] = useState(30)
-
-  // UI
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState('')
   const [expandedLojaId, setExpandedLojaId] = useState(null)
   const [filtroStatus, setFiltroStatus] = useState('')
   const [legendaOpen, setLegendaOpen] = useState(false)
 
-  // Mount: carrega dados de referência
   useEffect(() => {
-    Promise.all([
-      supabase.from('unidades').select('*').order('nome'),
-      supabase.from('lojas_parceiras').select('*').eq('ativa', true).order('nome'),
-      supabase.from('vendedoras_parceiras').select('*').order('nome'),
-    ]).then(([u, l, vp]) => {
-      if (u.error || l.error || vp.error) {
-        setErro('Erro ao carregar dados de referência.')
-        return
-      }
-      setUnidades(u.data || [])
-      setLojasParceiras(l.data || [])
-      setVendedorasParceiras(vp.data || [])
-    })
+    supabase.from('unidades').select('id, nome').order('nome').then(({ data }) => setUnidades(data || []))
   }, [])
 
-  // Recarrega ao mudar filtros
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
       setErro('')
-
       const periodoStart = new Date()
       periodoStart.setDate(periodoStart.getDate() - periodo)
       periodoStart.setHours(0, 0, 0, 0)
-
-      let q = supabase
-        .from('atendimentos')
-        .select('id, criado_em, unidade_id, vendedora_parceira_id, houve_venda, valor_venda')
-        .gte('criado_em', periodoStart.toISOString())
-        .order('criado_em', { ascending: false })
-      if (filtroUnidade) q = q.eq('unidade_id', filtroUnidade)
-
-      const lastQ = supabase
-        .from('atendimentos')
-        .select('vendedora_parceira_id, criado_em')
-        .order('criado_em', { ascending: false })
-        .limit(500)
-
-      const [{ data: a, error: errA }, { data: b, error: errB }] = await Promise.all([q, lastQ])
-
-      if (errA || errB) {
+      const { data, error } = await supabase.rpc('parceiros_metricas', {
+        p_inicio: periodoStart.toISOString(),
+        p_unidade_id: filtroUnidade || null,
+      })
+      if (error) {
         setErro('Erro ao carregar dados.')
         setLoading(false)
         return
       }
-
-      setAtendimentosPeriodo(a || [])
-      setUltimosAtendimentos(b || [])
+      setParceirosMetricas(data || [])
       setLoading(false)
     }
-
     fetchData()
   }, [filtroUnidade, periodo])
 
   const { lojaRows, summaryCards } = useMemo(() => {
-    const vpToLoja = new Map(vendedorasParceiras.map(vp => [vp.id, vp.loja_parceira_id]))
-    const unidadeNomeMap = new Map(unidades.map(u => [u.id, u.nome]))
-
-    // Último atendimento por loja (ultimosAtendimentos já vem sorted desc)
-    const ultimoByLoja = new Map()
-    for (const a of ultimosAtendimentos) {
-      const lojaId = vpToLoja.get(a.vendedora_parceira_id)
-      if (lojaId && !ultimoByLoja.has(lojaId))
-        ultimoByLoja.set(lojaId, new Date(a.criado_em))
-    }
-
-    // Métricas no período
-    const metricasByLoja = new Map()
-    const metricasByVendedora = new Map()
-    const cincosDiasAtras = new Date(Date.now() - 5 * 86400000)
-
-    for (const a of atendimentosPeriodo) {
-      const lojaId = vpToLoja.get(a.vendedora_parceira_id)
-      if (!lojaId) continue
-
-      if (!metricasByLoja.has(lojaId))
-        metricasByLoja.set(lojaId, { atendimentos: 0, vendas: 0, faturamento: 0, atend5d: 0 })
-      const ml = metricasByLoja.get(lojaId)
-      ml.atendimentos++
-      if (a.houve_venda) { ml.vendas++; ml.faturamento += parseFloat(a.valor_venda) || 0 }
-      if (new Date(a.criado_em) >= cincosDiasAtras) ml.atend5d++
-
-      const vpId = a.vendedora_parceira_id
-      if (!metricasByVendedora.has(vpId))
-        metricasByVendedora.set(vpId, { lojaId, atendimentos: 0, vendas: 0, faturamento: 0 })
-      const mv = metricasByVendedora.get(vpId)
-      mv.atendimentos++
-      if (a.houve_venda) { mv.vendas++; mv.faturamento += parseFloat(a.valor_venda) || 0 }
-    }
-
-    const lojaRows = lojasParceiras.map(loja => {
-      const m = metricasByLoja.get(loja.id) || { atendimentos: 0, vendas: 0, faturamento: 0, atend5d: 0 }
-      const conversao = m.atendimentos > 0 ? ((m.vendas / m.atendimentos) * 100).toFixed(1) : '0.0'
-      const ultimoAt = ultimoByLoja.get(loja.id) || null
+    const lojaRows = parceirosMetricas.map((loja) => {
+      const atendimentos = Number(loja.atendimentos || 0)
+      const vendas = Number(loja.vendas || 0)
+      const faturamento = Number(loja.faturamento || 0)
+      const atend5d = Number(loja.atendimentos_5d || 0)
+      const conversao = atendimentos > 0 ? ((vendas / atendimentos) * 100).toFixed(1) : '0.0'
+      const ultimoAt = loja.ultimo_atendimento ? new Date(loja.ultimo_atendimento) : null
       const diasSemAtividade = ultimoAt ? Math.floor((Date.now() - ultimoAt) / 86400000) : Infinity
-      const mediaDiaria5d = m.atend5d / 5
+      const mediaDiaria5d = atend5d / 5
 
       let status
       if (diasSemAtividade >= 7)      status = 'INATIVA'
@@ -141,25 +69,15 @@ export default function TabParceiros() {
       else if (mediaDiaria5d >= 4)    status = 'BOM'
       else                            status = 'ATIVO'
 
-      const vendedorasRow = vendedorasParceiras
-        .filter(vp => vp.loja_parceira_id === loja.id)
-        .map(vp => {
-          const mv = metricasByVendedora.get(vp.id) || { atendimentos: 0, vendas: 0, faturamento: 0 }
-          return {
-            ...vp, ...mv,
-            conversao: mv.atendimentos > 0 ? ((mv.vendas / mv.atendimentos) * 100).toFixed(1) : '0.0',
-          }
-        })
-        .sort((a, b) => b.atendimentos - a.atendimentos)
-
       return {
         ...loja,
-        unidadeNome: unidadeNomeMap.get(loja.unidade_id) || '—',
-        ...m, conversao, ultimoAt, diasSemAtividade, status, vendedorasRow,
+        unidadeNome: loja.unidade_nome || '—', atendimentos, vendas, faturamento,
+        atend5d, conversao, ultimoAt, diasSemAtividade, status,
+        vendedorasRow: (loja.vendedoras || []).map((item) => ({ ...item, atendimentos: Number(item.atendimentos), vendas: Number(item.vendas), faturamento: Number(item.faturamento) })),
       }
     })
 
-    const filtered = filtroUnidade ? lojaRows.filter(l => l.unidade_id === filtroUnidade) : lojaRows
+    const filtered = [...lojaRows]
     const STATUS_ORDER = { INATIVA: 0, REATIVAR: 1, ATIVO: 2, BOM: 3, EXCELENTE: 4 }
     filtered.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.nome.localeCompare(b.nome, 'pt-BR'))
 
@@ -176,7 +94,7 @@ export default function TabParceiros() {
     ]
 
     return { lojaRows: filtered, summaryCards }
-  }, [lojasParceiras, vendedorasParceiras, unidades, atendimentosPeriodo, ultimosAtendimentos, filtroUnidade])
+  }, [parceirosMetricas])
 
   return (
     <div className="space-y-5">

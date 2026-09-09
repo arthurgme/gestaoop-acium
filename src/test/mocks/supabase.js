@@ -23,10 +23,13 @@ export function mockQueryChain(...dataResponses) {
     limit: vi.fn(() => chain),
     update: vi.fn(() => chain),
     single: vi.fn(() => chain),
-    then: (resolve, reject) => {
+    _next: () => {
       const data = dataResponses[callCount % dataResponses.length]
       callCount++
-      return Promise.resolve({ data, error: null }).then(resolve, reject)
+      return data
+    },
+    then: (resolve, reject) => {
+      return Promise.resolve({ data: chain._next(), error: null }).then(resolve, reject)
     },
   }
 
@@ -40,4 +43,21 @@ export function mockQueryChain(...dataResponses) {
 export function setupFromMock(supabase, tableMap) {
   const emptyChain = mockQueryChain([])
   supabase.from.mockImplementation((table) => tableMap[table] ?? emptyChain)
+  if (!supabase.rpc) supabase.rpc = vi.fn()
+  const attendanceChain = tableMap.atendimentos
+  supabase.rpc.mockImplementation((name, args = {}) => {
+    if (name !== 'listar_atendimentos' || !attendanceChain) return Promise.resolve({ data: null, error: null })
+    attendanceChain.eq('arquivado', args.p_arquivado)
+    let items = attendanceChain._next() || []
+    const search = String(args.p_busca || '').toLowerCase()
+    if (search) items = items.filter((item) => item.nome_cliente?.toLowerCase().includes(search) || item.numero_boleta?.toLowerCase().includes(search))
+    items = items.map((item) => ({
+      ...item,
+      unidade_nome: item.unidade_nome || item.unidade?.nome,
+      vendedora_interna_nome: item.vendedora_interna_nome || item.vendedora_interna?.nome,
+      vendedora_parceira_nome: item.vendedora_parceira_nome || item.vendedora_parceira?.nome,
+      loja_nome: item.loja_nome || item.vendedora_parceira?.loja?.nome,
+    }))
+    return Promise.resolve({ data: { total: items.length, pagina: 1, por_pagina: 50, itens: items }, error: null })
+  })
 }

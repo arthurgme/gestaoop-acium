@@ -7,13 +7,27 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [authError, setAuthError] = useState('')
 
   async function fetchProfile(userId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*, unidade:unidades(id, nome)')
       .eq('id', userId)
       .single()
+    if (error || !data) {
+      setProfile(null)
+      setAuthError('Este usuário ainda não possui um acesso configurado.')
+      return
+    }
+    if (data.ativo === false) {
+      await supabase.auth.signOut()
+      setProfile(null)
+      setSession(null)
+      setAuthError('Este acesso está desativado. Fale com o administrador.')
+      return
+    }
+    setAuthError('')
     setProfile(data)
   }
 
@@ -38,6 +52,7 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function signIn(email, password) {
+    setAuthError('')
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error }
   }
@@ -49,7 +64,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, authError, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

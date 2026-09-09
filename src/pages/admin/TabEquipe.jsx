@@ -1,187 +1,116 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+
+const initialForm = { nome: '', username: '', password: '', role: 'pdv', unidade_id: '' }
+
+async function manageAccess(body) {
+  const { data, error } = await supabase.functions.invoke('manage-access', { body })
+  if (error) throw new Error(data?.error || error.message)
+  if (data?.error) throw new Error(data.error)
+  return data
+}
 
 export default function TabEquipe() {
   const [usuarios, setUsuarios] = useState([])
   const [unidades, setUnidades] = useState([])
+  const [form, setForm] = useState(initialForm)
   const [showCreate, setShowCreate] = useState(false)
-  const [showList, setShowList] = useState(true)
-
-  // Create form
-  const [nome, setNome] = useState('')
-  const [username, setUsername] = useState('')
-  const [senha, setSenha] = useState('')
-  const [role, setRole] = useState('pdv')
-  const [unidadeId, setUnidadeId] = useState('')
   const [loading, setLoading] = useState(false)
-  const [erroForm, setErroForm] = useState('')
-  const [erroDelete, setErroDelete] = useState('')
+  const [message, setMessage] = useState({ type: '', text: '' })
 
   const loadData = useCallback(async () => {
-    const [profRes, unRes] = await Promise.all([
-      supabase.from('profiles').select('*, unidade:unidades(nome)').order('nome'),
-      supabase.from('unidades').select('*').eq('ativa', true).order('nome'),
+    const [profiles, units] = await Promise.all([
+      supabase.from('profiles').select('id, nome, username, role, unidade_id, ativo, unidade:unidades(nome)').order('nome'),
+      supabase.from('unidades').select('id, nome').eq('ativa', true).order('nome'),
     ])
-    setUsuarios(profRes.data || [])
-    setUnidades(unRes.data || [])
+    setUsuarios(profiles.data || [])
+    setUnidades(units.data || [])
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
 
-  async function handleCreate(e) {
-    e.preventDefault()
+  function updateForm(key, value) {
+    setForm((current) => ({ ...current, [key]: value, ...(key === 'role' && value === 'admin' ? { unidade_id: '' } : {}) }))
+  }
+
+  async function handleCreate(event) {
+    event.preventDefault()
     setLoading(true)
-    const email = `${username.trim().toLowerCase()}@acium.local`
-    const { error } = await supabase.auth.signUp({
-      email,
-      password: senha,
-      options: {
-        data: {
-          nome: nome || username,
-          role,
-          unidade_id: role === 'pdv' ? unidadeId : null,
-          username: username.trim().toLowerCase(),
-        },
-      },
-    })
-    if (error) {
-      setErroForm('Erro: ' + error.message)
-    } else {
-      setErroForm('')
-      setNome('')
-      setUsername('')
-      setSenha('')
-      setRole('pdv')
-      setUnidadeId('')
+    setMessage({ type: '', text: '' })
+    try {
+      await manageAccess({ action: 'create', ...form })
+      setForm(initialForm)
       setShowCreate(false)
-      setTimeout(loadData, 1000)
+      setMessage({ type: 'success', text: 'Acesso criado. O novo usuário já pode entrar sem afetar sua sessão.' })
+      await loadData()
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message })
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
+  }
+
+  async function handleAction(user, action) {
+    let payload = { action, user_id: user.id }
+    if (action === 'reset_password') {
+      const password = window.prompt(`Digite a nova senha para ${user.nome}:\nMínimo 8 caracteres, com maiúscula, minúscula e número.`)
+      if (!password) return
+      payload = { ...payload, password }
+    } else {
+      const verb = action === 'deactivate' ? 'desativar' : 'reativar'
+      if (!window.confirm(`Deseja ${verb} o acesso de “${user.nome}”? Os dados históricos serão preservados.`)) return
+    }
+    setLoading(true)
+    setMessage({ type: '', text: '' })
+    try {
+      await manageAccess(payload)
+      setMessage({ type: 'success', text: action === 'reset_password' ? 'Senha redefinida.' : 'Status do acesso atualizado.' })
+      await loadData()
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow">
-        <button
-          onClick={() => setShowCreate((o) => !o)}
-          className="w-full px-6 py-4 flex items-center justify-between cursor-pointer text-left border-b border-gray-100"
-        >
-          <h2 className="text-base font-semibold text-gray-800">Novo Usuário</h2>
-          <svg className={`w-5 h-5 text-gray-400 transition-transform ${showCreate ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
+    <div className="space-y-5">
+      <div className="page-intro">
+        <div><p className="eyebrow">Segurança e operação</p><h2>Acessos</h2><p>Um login por unidade, com histórico preservado e gestão exclusiva do administrador.</p></div>
+        <button onClick={() => setShowCreate((value) => !value)} className="bg-[#ad7b1c] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-[#926514] cursor-pointer">
+          {showCreate ? 'Cancelar' : '+ Novo acesso'}
         </button>
+      </div>
+
+      {message.text && <div className={message.type === 'error' ? 'alert-error' : 'alert-success'}>{message.text}</div>}
 
       {showCreate && (
-        <form onSubmit={handleCreate} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-              <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Usuário (login)</label>
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required
-                pattern="[a-zA-Z0-9._-]+"
-                title="Apenas letras, números, pontos, hífens e underscores"
-                placeholder="ex: pdv.shopping"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-              <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
-              <select value={role} onChange={(e) => setRole(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                <option value="pdv">PDV</option>
-                <option value="admin">Admin</option>
-              </select>
-            </div>
-            {role === 'pdv' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
-                <select value={unidadeId} onChange={(e) => setUnidadeId(e.target.value)} required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
-                  <option value="">Selecione...</option>
-                  {unidades.map((u) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                </select>
-              </div>
-            )}
+        <form onSubmit={handleCreate} className="surface p-5 space-y-4">
+          <div className="section-heading !p-0 !pb-4"><div><h3>Criar acesso</h3><p>A senha não será exibida novamente.</p></div></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <label className="field-label">Nome do acesso<input className="field-control mt-1" value={form.nome} onChange={(event) => updateForm('nome', event.target.value)} required placeholder="Outlet Premium" /></label>
+            <label className="field-label">Usuário<input className="field-control mt-1" value={form.username} onChange={(event) => updateForm('username', event.target.value)} required minLength={3} pattern="[a-zA-Z0-9._-]+" placeholder="outlet" /></label>
+            <label className="field-label">Senha inicial<input className="field-control mt-1" type="password" value={form.password} onChange={(event) => updateForm('password', event.target.value)} required minLength={8} placeholder="8+ caracteres" /></label>
+            <label className="field-label">Perfil<select className="field-control mt-1" value={form.role} onChange={(event) => updateForm('role', event.target.value)}><option value="pdv">Unidade</option><option value="admin">Administrador</option></select></label>
+            {form.role === 'pdv' && <label className="field-label sm:col-span-2">Unidade vinculada<select className="field-control mt-1" value={form.unidade_id} onChange={(event) => updateForm('unidade_id', event.target.value)} required><option value="">Selecione a unidade</option>{unidades.map((unit) => <option key={unit.id} value={unit.id}>{unit.nome}</option>)}</select></label>}
           </div>
-          {erroForm && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erroForm}</p>}
-          <button type="submit" disabled={loading}
-            className="bg-amber-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-amber-700 disabled:opacity-50 cursor-pointer">
-            {loading ? 'Criando...' : 'Criar Usuário'}
-          </button>
+          <p className="text-xs text-stone-500">A senha deve ter ao menos uma letra maiúscula, uma minúscula e um número.</p>
+          <button disabled={loading} className="bg-[#ad7b1c] text-white px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 cursor-pointer">{loading ? 'Criando…' : 'Criar acesso'}</button>
         </form>
       )}
-      </div>
 
-      <div className="bg-white rounded-xl shadow">
-        <button
-          onClick={() => setShowList((o) => !o)}
-          className="w-full px-6 py-4 flex items-center justify-between cursor-pointer text-left border-b border-gray-100"
-        >
-          <div>
-            <h2 className="text-base font-semibold text-gray-800">Usuários Cadastrados</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{usuarios.length} usuário{usuarios.length !== 1 ? 's' : ''}</p>
-          </div>
-          <svg className={`w-5 h-5 text-gray-400 transition-transform ${showList ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {erroDelete && <p className="mx-6 mt-3 text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{erroDelete}</p>}
-        {showList && (usuarios.length === 0 ? (
-          <p className="px-6 py-8 text-sm text-gray-400 text-center">Nenhum usuário cadastrado.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-100">
-                  <th className="px-6 py-3 font-medium">Nome</th>
-                  <th className="px-6 py-3 font-medium">Usuário</th>
-                  <th className="px-6 py-3 font-medium">Perfil</th>
-                  <th className="px-6 py-3 font-medium">Unidade</th>
-                  <th className="px-6 py-3 font-medium">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usuarios.map((u) => (
-                  <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-6 py-3 font-medium text-gray-800">{u.nome}</td>
-                    <td className="px-6 py-3 text-gray-600">{u.username || '—'}</td>
-                    <td className="px-6 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {u.role.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-gray-600">{u.unidade?.nome || '—'}</td>
-                    <td className="px-6 py-3 flex items-center gap-3">
-                      <button
-                        onClick={async () => {
-                          if (!confirm(`Excluir o usuário "${u.nome}"? Essa ação não pode ser desfeita.`)) return
-                          const { error } = await supabase.rpc('delete_user', { p_user_id: u.id })
-                          if (error) setErroDelete('Erro ao excluir: ' + error.message)
-                          else { setErroDelete(''); loadData() }
-                        }}
-                        className="text-sm text-red-600 hover:text-red-700 font-medium cursor-pointer"
-                      >
-                        Excluir
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))}
-      </div>
+      <section className="surface overflow-hidden">
+        <div className="section-heading"><div><h3>Acessos cadastrados</h3><p>{usuarios.length} acesso{usuarios.length === 1 ? '' : 's'} · desativar não apaga o histórico</p></div></div>
+        {usuarios.length === 0 ? <p className="empty-state">Nenhum acesso cadastrado.</p> : (
+          <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Unidade</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+            {usuarios.map((user) => <tr key={user.id}>
+              <td className="font-semibold text-stone-800">{user.nome}</td><td>{user.username || '—'}</td><td>{user.role === 'admin' ? 'Administrador' : 'Unidade'}</td><td>{user.unidade?.nome || '—'}</td>
+              <td><span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.ativo === false ? 'bg-stone-100 text-stone-500' : 'bg-emerald-50 text-emerald-700'}`}>{user.ativo === false ? 'Inativo' : 'Ativo'}</span></td>
+              <td><div className="flex gap-3 whitespace-nowrap"><button disabled={loading} onClick={() => handleAction(user, 'reset_password')} className="text-[#765718] font-semibold cursor-pointer">Nova senha</button><button disabled={loading} onClick={() => handleAction(user, user.ativo === false ? 'reactivate' : 'deactivate')} className={user.ativo === false ? 'text-emerald-700 font-semibold cursor-pointer' : 'text-red-700 font-semibold cursor-pointer'}>{user.ativo === false ? 'Reativar' : 'Desativar'}</button></div></td>
+            </tr>)}
+          </tbody></table></div>
+        )}
+      </section>
     </div>
   )
 }

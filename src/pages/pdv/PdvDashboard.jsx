@@ -7,11 +7,11 @@ import TabPingentes from './TabPingentes'
 import TabConfiguracoes from './TabConfiguracoes'
 
 const TABS = [
-  { key: 'lancamento', label: 'Lançamento' },
+  { key: 'lancamento', label: 'Novo atendimento' },
+  { key: 'resultados', label: 'Dashboard' },
   { key: 'atendimentos', label: 'Atendimentos' },
-  { key: 'resultados', label: 'Resultados' },
   { key: 'pingentes', label: 'Pingentes' },
-  { key: 'configuracoes', label: 'Configurações' },
+  { key: 'configuracoes', label: 'Cadastros' },
 ]
 
 export default function PdvDashboard() {

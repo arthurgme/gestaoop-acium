@@ -1,16 +1,37 @@
-# React + Vite
+# Gestão de Parcerias Acium
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema interno para registrar e analisar indicações entre unidades Acium, lojas parceiras e vendedoras.
 
-Currently, two official plugins are available:
+## Perfis
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Administrador:** visão consolidada, cadastro de unidades, gestão de acessos, parceiros, estoque e auditoria.
+- **Unidade:** lançamento e consulta apenas dos dados da própria unidade, além dos cadastros operacionais permitidos.
 
-## React Compiler
+## Desenvolvimento
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+cp .env.example .env
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Validações:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+## Banco de dados
+
+As migrações estão em `supabase/`. A migração atual do core é `migration_008_core_parceria.sql` e deve ser aplicada somente depois de backup e homologação.
+
+Leia o [roteiro de implantação](docs/implantacao-core-parceria.md) antes de alterar produção.
+
+## Segurança
+
+- O frontend usa somente a chave pública (`VITE_SUPABASE_ANON_KEY`).
+- Criação, redefinição de senha e reativação de usuários passam pela Edge Function `manage-access`.
+- Nunca inclua a service role em arquivos `.env` usados pelo Vite.
+- Cadastro público por e-mail deve permanecer desabilitado no Supabase Auth.

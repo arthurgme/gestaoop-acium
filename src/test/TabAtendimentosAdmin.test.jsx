@@ -4,7 +4,7 @@ import TabAtendimentos from '../pages/admin/TabAtendimentos'
 import { mockQueryChain, setupFromMock } from './mocks/supabase'
 
 vi.mock('../lib/supabase', () => ({
-  supabase: { from: vi.fn() },
+  supabase: { from: vi.fn(), rpc: vi.fn() },
 }))
 
 import { supabase } from '../lib/supabase'
@@ -142,7 +142,7 @@ describe('TabAtendimentos (Admin)', () => {
     const input = screen.getByPlaceholderText(/pesquisar/i)
     fireEvent.change(input, { target: { value: 'Maria' } })
 
+    await waitFor(() => expect(screen.queryByText('Roberto Alves')).not.toBeInTheDocument())
     expect(screen.getByText('Maria Oliveira')).toBeInTheDocument()
-    expect(screen.queryByText('Roberto Alves')).not.toBeInTheDocument()
   })
 })

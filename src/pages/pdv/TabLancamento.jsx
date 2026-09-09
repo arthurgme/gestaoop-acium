@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../contexts/AuthContext'
-import { formatCurrency, formatDateTime, todayRange } from '../../lib/format'
+import { formatCurrency, todayRange } from '../../lib/format'
 
 export default function TabLancamento() {
   const { profile } = useAuth()
   const unidadeId = profile?.unidade_id
 
   const [atendimentos, setAtendimentos] = useState([])
+  const [totalHoje, setTotalHoje] = useState(0)
   const [showForm, setShowForm] = useState(false)
   const [showHistorico, setShowHistorico] = useState(true)
   const [vendedorasInternas, setVendedorasInternas] = useState([])
@@ -34,19 +35,21 @@ export default function TabLancamento() {
 
   const loadAtendimentos = useCallback(async () => {
     const { start, end } = todayRange()
-    const { data } = await supabase
+    const { data, count } = await supabase
       .from('atendimentos')
       .select(`
         *,
         vendedora_interna:vendedoras_internas(nome),
         vendedora_parceira:vendedoras_parceiras(nome, loja:lojas_parceiras(nome))
-      `)
+      `, { count: 'exact' })
       .eq('unidade_id', unidadeId)
       .eq('arquivado', false)
       .gte('criado_em', start)
       .lte('criado_em', end)
       .order('criado_em', { ascending: false })
+      .limit(50)
     setAtendimentos(data || [])
+    setTotalHoje(count || 0)
   }, [unidadeId])
 
   const loadSelects = useCallback(async () => {
@@ -361,7 +364,7 @@ export default function TabLancamento() {
         >
           <div>
             <h3 className="font-semibold text-gray-800">Atendimentos de Hoje</h3>
-            <p className="text-xs text-gray-400 mt-0.5">{atendimentos.length} registrado{atendimentos.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{totalHoje.toLocaleString('pt-BR')} registrado{totalHoje !== 1 ? 's' : ''} · exibindo os 50 mais recentes</p>
           </div>
           <svg className={`w-5 h-5 text-gray-400 transition-transform ${showHistorico ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
