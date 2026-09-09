@@ -22,7 +22,55 @@ function SelectField({ label, value, onChange, options, allLabel = 'Todos', disa
   )
 }
 
-function Ranking({ title, subtitle, rows, firstColumn = 'Nome', showStore = false }) {
+const rankingColumns = [
+  { key: 'atendimentos', label: 'Atendimentos', numeric: true },
+  { key: 'vendas', label: 'Vendas', numeric: true },
+  { key: 'conversao', label: 'Conversão', numeric: true },
+  { key: 'faturamento', label: 'Faturamento', numeric: true },
+  { key: 'ticket_medio', label: 'Ticket médio', numeric: true },
+]
+
+function SortableHeader({ column, sort, onSort, align = 'left' }) {
+  const active = sort.key === column.key
+  const direction = active ? sort.direction : null
+  const nextDirection = !active ? 'decrescente' : direction === 'desc' ? 'crescente' : 'ordem padrão'
+
+  return (
+    <th className={align === 'right' ? 'text-right' : ''} aria-sort={!active ? 'none' : direction === 'desc' ? 'descending' : 'ascending'}>
+      <button type="button" className={`sortable-heading ${align === 'right' ? 'sortable-heading-right' : ''} ${active ? 'sortable-heading-active' : ''}`} onClick={() => onSort(column.key)} aria-label={`Ordenar ${column.label} em ordem ${nextDirection}`}>
+        <span>{column.label}</span>
+        <span className="sort-indicator" aria-hidden="true">{!active ? '↕' : direction === 'desc' ? '↓' : '↑'}</span>
+      </button>
+    </th>
+  )
+}
+
+export function Ranking({ title, subtitle, rows, firstColumn = 'Nome', showStore = false }) {
+  const [sort, setSort] = useState({ key: '', direction: '' })
+  const columns = useMemo(() => [
+    { key: 'nome', label: firstColumn },
+    ...(showStore ? [{ key: 'loja_nome', label: 'Loja' }] : []),
+    ...rankingColumns,
+  ], [firstColumn, showStore])
+  const sortedRows = useMemo(() => {
+    if (!sort.key) return rows
+    const column = columns.find((item) => item.key === sort.key)
+    return [...rows].sort((left, right) => {
+      const comparison = column?.numeric
+        ? Number(left[sort.key] || 0) - Number(right[sort.key] || 0)
+        : String(left[sort.key] || '').localeCompare(String(right[sort.key] || ''), 'pt-BR', { sensitivity: 'base' })
+      return sort.direction === 'asc' ? comparison : -comparison
+    })
+  }, [columns, rows, sort])
+
+  function cycleSort(key) {
+    setSort((current) => {
+      if (current.key !== key) return { key, direction: 'desc' }
+      if (current.direction === 'desc') return { key, direction: 'asc' }
+      return { key: '', direction: '' }
+    })
+  }
+
   return (
     <section className="surface overflow-hidden">
       <div className="section-heading">
@@ -32,8 +80,8 @@ function Ranking({ title, subtitle, rows, firstColumn = 'Nome', showStore = fals
       {rows.length === 0 ? <p className="empty-state">Sem dados para os filtros selecionados.</p> : (
         <div className="overflow-x-auto">
           <table className="data-table">
-            <thead><tr><th>{firstColumn}</th>{showStore && <th>Loja</th>}<th className="text-right">Atend.</th><th className="text-right">Vendas</th><th className="text-right">Conversão</th><th className="text-right">Faturamento</th><th className="text-right">Ticket médio</th></tr></thead>
-            <tbody>{rows.map((row) => (
+            <thead><tr>{columns.map((column) => <SortableHeader key={column.key} column={column} sort={sort} onSort={cycleSort} align={column.numeric ? 'right' : 'left'} />)}</tr></thead>
+            <tbody>{sortedRows.map((row) => (
               <tr key={row.id}>
                 <td className="font-semibold text-stone-800">{row.nome}</td>
                 {showStore && <td>{row.loja_nome || '—'}</td>}
