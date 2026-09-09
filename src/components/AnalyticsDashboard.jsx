@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/format'
 import { formatRangeLabel, getDateRange } from '../lib/dateRanges'
 import PeriodFilter from './PeriodFilter'
+import { fetchDashboardFallback } from '../lib/dashboardFallback'
 
 const emptyMetrics = {
   resumo: { atendimentos: 0, vendas: 0, conversao: 0, faturamento: 0, ticket_medio: 0, produtos: 0, media_produtos: 0 },
@@ -59,6 +60,7 @@ export default function AnalyticsDashboard({ fixedUnidadeId = '', unidadeNome = 
   const [metrics, setMetrics] = useState(emptyMetrics)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [compatibilityMode, setCompatibilityMode] = useState(false)
   const range = useMemo(() => getDateRange(preset, new Date(), custom), [preset, custom])
 
   useEffect(() => {
@@ -84,14 +86,33 @@ export default function AnalyticsDashboard({ fixedUnidadeId = '', unidadeNome = 
       p_vendedora_parceira_id: filters.parceira || null,
       p_vendedora_interna_id: filters.interna || null,
       p_houve_venda: filters.venda === '' ? null : filters.venda === 'true',
-    }).then(({ data, error: queryError }) => {
+    }).then(async ({ data, error: queryError }) => {
       if (!active) return
-      if (queryError) setError('Não foi possível carregar o dashboard. Verifique se a migração do core foi aplicada.')
-      setMetrics(data || emptyMetrics)
+      if (!queryError) {
+        setCompatibilityMode(false)
+        setMetrics(data || emptyMetrics)
+        setLoading(false)
+        return
+      }
+
+      try {
+        const lojaSellerIds = references.parceiras.filter((item) => item.loja_parceira_id === filters.loja).map((item) => item.id)
+        const fallback = await fetchDashboardFallback({
+          start: range.start,
+          end: range.end,
+          filters: { ...filters, unidade: fixedUnidadeId || filters.unidade },
+          lojaSellerIds,
+        })
+        if (!active) return
+        setMetrics(fallback)
+        setCompatibilityMode(true)
+      } catch {
+        if (active) setError('Não foi possível carregar o dashboard.')
+      }
       setLoading(false)
     })
     return () => { active = false }
-  }, [filters, fixedUnidadeId, range.start, range.end])
+  }, [filters, fixedUnidadeId, range.start, range.end, references.parceiras])
 
   const unitId = fixedUnidadeId || filters.unidade
   const lojas = references.lojas.filter((item) => !unitId || item.unidade_id === unitId)
@@ -137,6 +158,7 @@ export default function AnalyticsDashboard({ fixedUnidadeId = '', unidadeNome = 
       </section>
 
       {error && <div className="alert-error">{error}</div>}
+      {compatibilityMode && <div className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs">Modo de compatibilidade ativo: os dados foram carregados em páginas de 1.000 registros. A migração do banco continua recomendada para maior velocidade.</div>}
       <div className="metric-grid" aria-busy={loading}>
         {cards.map(([label, value], index) => <article key={label} className={`metric-card ${index === 3 ? 'metric-card-featured' : ''}`}><p>{label}</p><strong>{loading ? '—' : value}</strong></article>)}
       </div>
