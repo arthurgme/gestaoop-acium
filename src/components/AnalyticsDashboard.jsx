@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { formatCurrency } from '../lib/format'
-import { formatRangeLabel, getDateRange } from '../lib/dateRanges'
+import { formatRangeLabel, getDateRange, PERIOD_PRESETS } from '../lib/dateRanges'
 import PeriodFilter from './PeriodFilter'
 import { fetchDashboardFallback } from '../lib/dashboardFallback'
 
@@ -61,6 +61,7 @@ export default function AnalyticsDashboard({ fixedUnidadeId = '', unidadeNome = 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [compatibilityMode, setCompatibilityMode] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const range = useMemo(() => getDateRange(preset, new Date(), custom), [preset, custom])
 
   useEffect(() => {
@@ -129,6 +130,20 @@ export default function AnalyticsDashboard({ fixedUnidadeId = '', unidadeNome = 
     ['Ticket médio', formatCurrency(Number(summary.ticket_medio))],
     ['Produtos por venda', Number(summary.media_produtos).toLocaleString('pt-BR')],
   ]
+  const presetLabel = PERIOD_PRESETS.find((item) => item.id === preset)?.label || 'Período'
+  const activeFilterCount = Object.values(filters).filter(Boolean).length
+  const selectedUnit = references.unidades.find((item) => item.id === filters.unidade)?.nome
+  const selectedStore = references.lojas.find((item) => item.id === filters.loja)?.nome
+  const selectedPartner = references.parceiras.find((item) => item.id === filters.parceira)?.nome
+  const selectedInternal = references.internas.find((item) => item.id === filters.interna)?.nome
+  const filterSummary = [
+    presetLabel,
+    selectedUnit,
+    selectedStore,
+    selectedPartner,
+    selectedInternal,
+    filters.venda === 'true' ? 'Com venda' : filters.venda === 'false' ? 'Sem venda' : '',
+  ].filter(Boolean)
 
   function updateFilter(key, value) {
     setFilters((current) => {
@@ -146,15 +161,25 @@ export default function AnalyticsDashboard({ fixedUnidadeId = '', unidadeNome = 
         <div className="journey-line" aria-label="Fluxo da indicação"><span>Unidade</span><i>→</i><span>Loja</span><i>→</i><span>Vendedora</span><i>→</i><span>Atendimento</span><i>→</i><strong>Venda</strong></div>
       </div>
 
-      <section className="surface p-4 sm:p-5 space-y-4">
-        <PeriodFilter preset={preset} onPresetChange={setPreset} customStart={custom.start} customEnd={custom.end} onCustomChange={(key, value) => setCustom((current) => ({ ...current, [key]: value }))} />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 border-t border-stone-200 pt-4">
-          {isAdmin && <SelectField label="Unidade" value={filters.unidade} onChange={(value) => updateFilter('unidade', value)} options={references.unidades} allLabel="Todas as unidades" />}
-          <SelectField label="Loja parceira" value={filters.loja} onChange={(value) => updateFilter('loja', value)} options={lojas} allLabel="Todas as lojas" />
-          <SelectField label="Vendedora parceira" value={filters.parceira} onChange={(value) => updateFilter('parceira', value)} options={parceiras} allLabel="Todas as vendedoras" />
-          <SelectField label="Vendedora interna" value={filters.interna} onChange={(value) => updateFilter('interna', value)} options={internas} allLabel="Toda a equipe" />
-          <SelectField label="Resultado" value={filters.venda} onChange={(value) => updateFilter('venda', value)} options={[{ id: 'true', nome: 'Com venda' }, { id: 'false', nome: 'Sem venda' }]} allLabel="Todos" />
-        </div>
+      <section className="surface overflow-hidden">
+        <button type="button" onClick={() => setFiltersOpen((current) => !current)} aria-expanded={filtersOpen} className="filter-toggle">
+          <div className="min-w-0 text-left">
+            <div className="flex items-center gap-2"><strong>Filtros</strong>{activeFilterCount > 0 && <span className="count-badge">{activeFilterCount}</span>}</div>
+            <div className="filter-summary">{filterSummary.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}</div>
+          </div>
+          <span className="filter-toggle-action">{filtersOpen ? 'Recolher' : 'Abrir filtros'} <i className={filtersOpen ? 'rotate-180' : ''}>⌄</i></span>
+        </button>
+        {filtersOpen && <div className="filter-panel">
+          <div className={`filter-linear ${isAdmin ? 'filter-linear-admin' : ''}`}>
+            <PeriodFilter preset={preset} onPresetChange={setPreset} customStart={custom.start} customEnd={custom.end} onCustomChange={(key, value) => setCustom((current) => ({ ...current, [key]: value }))} />
+            {isAdmin && <SelectField label="Unidade" value={filters.unidade} onChange={(value) => updateFilter('unidade', value)} options={references.unidades} allLabel="Todas as unidades" />}
+            <SelectField label="Loja parceira" value={filters.loja} onChange={(value) => updateFilter('loja', value)} options={lojas} allLabel="Todas as lojas" />
+            <SelectField label="Vend. parceira" value={filters.parceira} onChange={(value) => updateFilter('parceira', value)} options={parceiras} allLabel="Todas as vendedoras" />
+            <SelectField label="Vend. interna" value={filters.interna} onChange={(value) => updateFilter('interna', value)} options={internas} allLabel="Toda a equipe" />
+            <SelectField label="Resultado" value={filters.venda} onChange={(value) => updateFilter('venda', value)} options={[{ id: 'true', nome: 'Com venda' }, { id: 'false', nome: 'Sem venda' }]} allLabel="Todos" />
+          </div>
+          <div className="mt-3 flex justify-end"><button type="button" onClick={() => setFiltersOpen(false)} className="text-xs font-semibold text-[#765718] cursor-pointer">Aplicar e recolher</button></div>
+        </div>}
       </section>
 
       {error && <div className="alert-error">{error}</div>}
