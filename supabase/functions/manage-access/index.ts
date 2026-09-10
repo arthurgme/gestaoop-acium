@@ -99,6 +99,22 @@ Deno.serve(async (request) => {
     })
     if (error) return json({ error: error.message }, 400, headers)
 
+    // O Auth pode concluir a persistência de app_metadata depois do trigger de
+    // criação do perfil. Confirma explicitamente o vínculo para que o PDV nunca
+    // seja criado sem unidade mesmo quando isso acontecer.
+    const { error: profileError } = await admin.from('profiles').upsert({
+      id: data.user.id,
+      nome,
+      username,
+      role,
+      unidade_id: unidadeId,
+      ativo: true,
+    })
+    if (profileError) {
+      await admin.auth.admin.deleteUser(data.user.id)
+      return json({ error: 'Não foi possível concluir a criação do acesso.' }, 500, headers)
+    }
+
     await admin.from('audit_logs').insert({
       usuario_id: caller.id,
       unidade_id: unidadeId,
