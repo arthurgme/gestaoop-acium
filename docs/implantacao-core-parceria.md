@@ -59,6 +59,8 @@ Não coloque `SUPABASE_SERVICE_ROLE_KEY` no Vite, no GitHub ou em qualquer vari�
 - Criar um acesso não encerra nem troca a sessão do admin.
 - Desativar acesso não apaga dados históricos e pode ser revertido.
 - Alterações de atendimentos aparecem em Auditoria.
+- Atendimentos podem ser lançados com saldo zerado; o consumo deixa o saldo
+  negativo para sinalizar a reposição necessária, sem perder a movimentação.
 
 ## Retorno em caso de falha
 
